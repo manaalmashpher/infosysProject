@@ -17,3 +17,4 @@ venv/
 Lib/site-packages/
 .vscode/
 *.code-workspace
+credentials.json
