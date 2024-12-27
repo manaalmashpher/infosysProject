@@ -1,38 +1,19 @@
-# Ignore Python cache files
 __pycache__/
 *.pyc
-
-# Ignore environment files
 .env
 *.env
-
-# Ignore virtual environment folder
 venv/
 env/
-
-# Ignore logs and temporary files
 *.log
 *.tmp
-
-# Ignore large folders with unnecessary files
 node_modules/
-
-# Ignore Python cache files
 __pycache__/
 *.pyc
-
-# Ignore virtual environment folder
 myenv/
 env/
 venv/
-
-# Ignore logs and temporary files
 *.log
 *.tmp
-
-# Ignore Python dependencies (site-packages)
 Lib/site-packages/
-
-# Ignore IDE and editor settings
 .vscode/
 *.code-workspace
