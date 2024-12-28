@@ -11,30 +11,61 @@ from dotenv import load_dotenv
 import threading
 import io
 
+
 load_dotenv()
-key = os.getenv("GROQ_API_KEY")
-client = Groq(api_key=key)
+key1 = os.getenv("GROQ_API_KEY")
+
+groqclient = Groq(api_key=key1)
 
 recognizer = Recognizer()
 microphone = Microphone()
 
-st.title('Real-Time Speech Analysis and Transcription with Groq')   
-if st.button("Start Listening"):
-    with microphone as source:
-        st.info("Listening...")
-        audio = recognizer.listen(source)
-        audio_data = audio.get_wav_data()
+st.title('Real-Time Speech Analysis and Transcription with Groq')
 
-        if audio_data:
-            st.title('Audio Transcript')
+# Initialize session state for stop_listening and transcription_result
+if 'stop_listening' not in st.session_state:
+    st.session_state.stop_listening = False
+if 'transcription_result' not in st.session_state:
+    st.session_state.transcription_result = ""
+
+def transcribe_audio(transcription_placeholder):
+    with microphone as source:
+        recognizer.adjust_for_ambient_noise(source)
+        st.info("Listening...")
+        while not st.session_state.stop_listening:
             try:
-                audio_file = io.BytesIO(audio_data)
-                audio_file.name = "audio.wav"
-                transcription = client.audio.transcriptions.create(
-                    model="distil-whisper-large-v3-en", 
-                    file=audio_file,
-                    prompt="provide an accurate transcription of the audio file using punctuations and capitalization as well."
-                )
-                st.write(transcription.text)
-            except groq.NotFoundError as e:
-                st.error(f"Error: {e.error['message']}")
+                audio = recognizer.listen(source, timeout=5, phrase_time_limit=5)
+                audio_data = audio.get_wav_data()
+
+                if audio_data:
+                    print("Audio data received.")
+                    audio_file = io.BytesIO(audio_data)
+                    audio_file.name = "audio.wav"
+                    print("Sending audio data for transcription...")
+                    transcription = groqclient.audio.transcriptions.create(
+                        model="whisper-large-v3", 
+                        file=audio_file,
+                        prompt="provide an accurate transcription of the audio file using punctuations and capitalization as well."
+                    )
+                    st.session_state.transcription_result += transcription.text + " "
+                    transcription_placeholder.text(st.session_state.transcription_result)
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
+                break
+
+def analyze_sentiment():
+    () 
+
+if st.button("Start Listening"):
+    st.session_state.stop_listening = False
+    st.write("Listening started...")
+    transcription_placeholder = st.empty()
+    transcribe_audio(transcription_placeholder)
+
+if st.button("Stop Listening"):
+    st.session_state.stop_listening = True
+    st.write("Listening stopped.")
+
+if st.session_state.transcription_result:
+    print("Transcription received.")
+    st.write(st.session_state.transcription_result)
