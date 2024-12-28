@@ -34,12 +34,16 @@ def analyze_sentiment(text):
             messages=[
                 {
                     "role": "system",
-                    "content": """You are a sentiment analysis assistant. Based on the given text, provide only one of the following responses: 'Positive', 'Negative', or 'Neutral' . 
-                                   Examples:
-                                   - "I am very happy today!" -> Positive
-                                   - "This is frustrating and annoying." -> Negative
-                                   - "The event was okay, nothing special." -> Neutral
-                                   Analyze the sentiment and respond appropriately."""
+                    "content": """You are a sentiment analysis assistant. For the given text, provide the most confident sentiment (Positive, Negative, Neutral) along with confidence scores for each sentiment.
+                                   Respond in the following JSON format:
+                                   {
+                                       "Sentiment": "Positive/Negative/Neutral",
+                                       "Scores": {
+                                           "Positive": 0.85,
+                                           "Negative": 0.10,
+                                           "Neutral": 0.05
+                                       }
+                                   }"""
                 },
                 {
                     "role": "user",
@@ -50,7 +54,7 @@ def analyze_sentiment(text):
             temperature=0.5
         )
         sentiment_result = sentiment_completion.choices[0].message.content
-        return sentiment_result
+        return eval(sentiment_result)
     except Exception as e:
         st.error(f"Error analyzing sentiment: {str(e)}")
         return None
@@ -83,7 +87,16 @@ def transcribe_audio():
 
                     sentiment_result = analyze_sentiment(transcription.text)
                     if sentiment_result:
-                        sentiment_placeholder.markdown(f"### Sentiment: {sentiment_result}")
+                        sentiment_text = sentiment_result.get("Sentiment", "Unknown")
+                        scores = sentiment_result.get("Scores", {})
+                        sentiment_display = (
+                            f"### Sentiment: {sentiment_text}\n\n"
+                            f"**Confidence Scores:**\n"
+                            f"- Positive: {scores.get('Positive', 0):.2f}\n"
+                            f"- Negative: {scores.get('Negative', 0):.2f}\n"
+                            f"- Neutral: {scores.get('Neutral', 0):.2f}"
+                        )
+                        sentiment_placeholder.markdown(sentiment_display)
             except Exception as e:
                 st.error(f"Error: {str(e)}")
                 break
