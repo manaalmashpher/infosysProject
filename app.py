@@ -28,7 +28,38 @@ if 'stop_listening' not in st.session_state:
 if 'transcription_result' not in st.session_state:
     st.session_state.transcription_result = ""
 
-def transcribe_audio(transcription_placeholder):
+def analyze_sentiment(text):
+    try:
+        sentiment_completion = groqclient.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": """You are a sentiment analysis assistant. Based on the given text, provide only one of the following responses: 'Positive', 'Negative', or 'Neutral' . 
+                                   Examples:
+                                   - "I am very happy today!" -> Positive
+                                   - "This is frustrating and annoying." -> Negative
+                                   - "The event was okay, nothing special." -> Neutral
+                                   Analyze the sentiment and respond appropriately."""
+                },
+                {
+                    "role": "user",
+                    "content": text
+                }
+            ],
+            model="llama-3.3-70b-versatile",
+            temperature=0.5
+        )
+        sentiment_result = sentiment_completion.choices[0].message.content
+        return sentiment_result
+    except Exception as e:
+        st.error(f"Error analyzing sentiment: {str(e)}")
+        return None
+    
+
+def transcribe_audio():
+    transcription_placeholder = st.empty()
+    sentiment_placeholder = st.empty()
+
     with microphone as source:
         recognizer.adjust_for_ambient_noise(source)
         st.info("Listening...")
@@ -49,22 +80,24 @@ def transcribe_audio(transcription_placeholder):
                     )
                     st.session_state.transcription_result += transcription.text + " "
                     transcription_placeholder.text(st.session_state.transcription_result)
+
+                    sentiment_result = analyze_sentiment(transcription.text)
+                    if sentiment_result:
+                        sentiment_placeholder.markdown(f"### Sentiment: {sentiment_result}")
             except Exception as e:
                 st.error(f"Error: {str(e)}")
                 break
 
-def analyze_sentiment():
-    () 
-
-if st.button("Start Listening"):
-    st.session_state.stop_listening = False
-    st.write("Listening started...")
-    transcription_placeholder = st.empty()
-    transcribe_audio(transcription_placeholder)
-
-if st.button("Stop Listening"):
-    st.session_state.stop_listening = True
-    st.write("Listening stopped.")
+if not st.session_state.stop_listening:
+    if st.button("Start Listening"):
+        st.session_state.stop_listening = False
+        transcription_placeholder = st.empty()
+        sentiment_placeholder = st.empty()
+        transcribe_audio()
+else:
+    if st.button("Stop Listening"):
+        st.session_state.stop_listening = True
+        st.write("Listening stopped.")
 
 if st.session_state.transcription_result:
     print("Transcription received.")
