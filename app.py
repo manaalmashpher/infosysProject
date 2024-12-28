@@ -10,6 +10,7 @@ import os
 from dotenv import load_dotenv
 import threading
 import io
+import json
 
 
 load_dotenv()
@@ -54,7 +55,7 @@ def analyze_sentiment(text):
             temperature=0.5
         )
         sentiment_result = sentiment_completion.choices[0].message.content
-        return eval(sentiment_result)
+        return json.loads(sentiment_result)
     except Exception as e:
         st.error(f"Error analyzing sentiment: {str(e)}")
         return None
