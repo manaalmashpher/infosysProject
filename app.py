@@ -4,7 +4,6 @@ import threading
 from speech_recognition import Recognizer, Microphone
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import groq
 from groq import Groq
 import os
 from dotenv import load_dotenv
@@ -23,11 +22,32 @@ microphone = Microphone()
 
 st.title('Real-Time Speech Analysis and Transcription with Groq')
 
-# Initialize session state for stop_listening and transcription_result
 if 'stop_listening' not in st.session_state:
     st.session_state.stop_listening = False
 if 'transcription_result' not in st.session_state:
     st.session_state.transcription_result = ""
+
+
+scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+client = gspread.authorize(creds)
+sheet = client.open("Chat Analysis Results").sheet1
+
+def append_to_google_sheet(text, sentiment_result):
+    try:
+        sentiment = sentiment_result.get("Sentiment", "Unknown")
+        scores = sentiment_result.get("Scores", {})
+        sheet.append_row([
+            text,
+            sentiment,
+            scores.get("Positive", 0),
+            scores.get("Negative", 0),
+            scores.get("Neutral", 0)
+        ])
+        print("Data has been successfully saved!")
+    except Exception as e:
+        st.error(f"Error saving the results: {str(e)}")
+
 
 def analyze_sentiment(text):
     try:
@@ -98,6 +118,8 @@ def transcribe_audio():
                             f"- Neutral: {scores.get('Neutral', 0):.2f}"
                         )
                         sentiment_placeholder.markdown(sentiment_display)
+
+                        append_to_google_sheet(transcription.text, sentiment_result)
             except Exception as e:
                 st.error(f"Error: {str(e)}")
                 break
